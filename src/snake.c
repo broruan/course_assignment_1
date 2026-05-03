@@ -24,10 +24,12 @@
 #define DIR_RIGHT 3
 
 /* ─── 地图格子类型 ─── */
-#define CELL_EMPTY 0
-#define CELL_WALL  1
-#define CELL_SNAKE 2
-#define CELL_FOOD  3
+#define CELL_EMPTY  0
+#define CELL_WALL   1
+#define CELL_SNAKE  2
+#define CELL_FOOD_1 3  /* 蓝色食物 - 1倍分数 */
+#define CELL_FOOD_2 4  /* 紫色食物 - 2倍分数 */
+#define CELL_FOOD_3 5  /* 橙色食物 - 3倍分数 */
 
 /* ─── 速度档位（毫秒/帧） ─── */
 #define SPEED_SLOW   300
@@ -40,7 +42,9 @@
 #define CLR_WALL     8    /* 深灰 */
 #define CLR_SNAKE_H  10   /* 亮绿 - 蛇头 */
 #define CLR_SNAKE_B  2    /* 深绿 - 蛇身 */
-#define CLR_FOOD     12   /* 亮红 */
+#define CLR_FOOD_1   9    /* 亮蓝 - 1倍食物 */
+#define CLR_FOOD_2   13   /* 亮紫 - 2倍食物 */
+#define CLR_FOOD_3   6    /* 橙色 - 3倍食物 */
 #define CLR_SCORE    14   /* 亮黄 */
 #define CLR_TITLE    11   /* 亮青 */
 #define CLR_MENU     15   /* 白色 */
@@ -72,6 +76,7 @@ typedef struct {
     int   high_score;        /* 最高得分（本次运行） */
     int   speed;             /* 当前速度（ms） */
     int   food_x, food_y;    /* 食物坐标 */
+    int   food_type;         /* 食物类型（1/2/3倍） */
     int   map[MAP_H][MAP_W]; /* 地图二维数组 */
     int   game_over;         /* 游戏结束标志 */
     int   paused;            /* 暂停标志 */
@@ -147,7 +152,7 @@ static void draw_cell(int mx, int my, int type) {
     gotoxy(sx, sy);
     switch (type) {
         case CELL_WALL:
-            set_color(CLR_WALL);
+            set_color(CLR_WALL); //定义边界
             printf("██");
             break;
         case CELL_SNAKE:
@@ -156,8 +161,16 @@ static void draw_cell(int mx, int my, int type) {
             set_color(CLR_SNAKE_B);
             printf("▓▓");
             break;
-        case CELL_FOOD:
-            set_color(CLR_FOOD);
+        case CELL_FOOD_1:     //蓝色食物 - 1倍
+            set_color(CLR_FOOD_1);
+            printf("◆◆");
+            break;
+        case CELL_FOOD_2:     //紫色食物 - 2倍
+            set_color(CLR_FOOD_2);
+            printf("◆◆");
+            break;
+        case CELL_FOOD_3:     //橙色食物 - 3倍
+            set_color(CLR_FOOD_3);
             printf("◆◆");
             break;
         case CELL_EMPTY:
@@ -214,14 +227,21 @@ static void draw_full_map(GameState *g) {
     draw_head_cell(g->head->x, g->head->y);
 
     /* 绘制食物 */
-    draw_cell(g->food_x, g->food_y, CELL_FOOD);
+    if (g->food_type == 1)
+        draw_cell(g->food_x, g->food_y, CELL_FOOD_1);
+    else if (g->food_type == 2)
+        draw_cell(g->food_x, g->food_y, CELL_FOOD_2);
+    else
+        draw_cell(g->food_x, g->food_y, CELL_FOOD_3);
 }
 
 /* ════════════════════════════════════════
-   生成食物（随机放置在空格上）
-   ════════════════════════════════════════ */
+   生成食物（随机放置在空格上，随机类型）
+   ═════════════════════SSSSSSSSSSSSSS═══════════════════ */
 static void generate_food(GameState *g) {
     int x, y;
+    int food_rand;
+
     do {
         x = rand() % (MAP_W - 2) + 1;
         y = rand() % (MAP_H - 2) + 1;
@@ -229,7 +249,19 @@ static void generate_food(GameState *g) {
 
     g->food_x = x;
     g->food_y = y;
-    g->map[y][x] = CELL_FOOD;
+
+    /* 随机生成食物类型：1倍(50%)、2倍(30%)、3倍(20%) */
+    food_rand = rand() % 100;
+    if (food_rand < 50) {
+        g->food_type = 1;
+        g->map[y][x] = CELL_FOOD_1;
+    } else if (food_rand < 80) {
+        g->food_type = 2;
+        g->map[y][x] = CELL_FOOD_2;
+    } else {
+        g->food_type = 3;
+        g->map[y][x] = CELL_FOOD_3;
+    }
 }
 
 /* ════════════════════════════════════════
@@ -442,17 +474,52 @@ static void move_snake(GameState *g) {
         case DIR_RIGHT: nx++; break;
     }
 
-    /* ─── 死亡判定：撞墙或撞自己 ─── */
+    /* ─── 死亡判定：撞墙 ─── */
     cell = g->map[ny][nx];
-    if (cell == CELL_WALL || cell == CELL_SNAKE) {
+    if (cell == CELL_WALL) {
         g->game_over = 1;
         return;
     }
 
+    /* ─── 撞到自己：移除碰撞点及之后的身体 ─── */
+    if (cell == CELL_SNAKE) {
+        Node *cur = g->tail;
+        Node *collision_node = NULL;
+
+        /* 找到碰撞点的节点 */
+        while (cur) {
+            if (cur->x == nx && cur->y == ny) {
+                collision_node = cur;
+                break;
+            }
+            cur = cur->prev;
+        }
+
+        /* 移除碰撞点及之后的所有节点（从尾部到碰撞点） */
+        if (collision_node) {
+            while (g->tail && (g->tail->y != collision_node->y || g->tail->x != collision_node->x)) {
+                pop_tail(g);
+            }
+            /* 移除碰撞点本身 */
+            if (g->tail) {
+                pop_tail(g);
+            }
+        }
+
+        /* 如果蛇太短（只剩头部或没有节点），游戏结束 */
+        if (g->length < 2) {
+            g->game_over = 1;
+            return;
+        }
+    }
+
     /* ─── 吃食物检测 ─── */
-    if (cell == CELL_FOOD) {
-        /* 得分统计 */
-        g->score += 10;
+    if (cell == CELL_FOOD_1 || cell == CELL_FOOD_2 || cell == CELL_FOOD_3) {
+        /* 根据食物类型计算得分 */
+        int base_score = 10;
+        int multiplier = (cell == CELL_FOOD_1) ? 1 : (cell == CELL_FOOD_2) ? 2 : 3;
+
+        g->score += base_score * multiplier;
         if (g->score > g->high_score)
             g->high_score = g->score;
         if (g->score > g_high_score)
@@ -468,7 +535,7 @@ static void move_snake(GameState *g) {
 
         /* 生成新食物 */
         generate_food(g);
-        draw_cell(g->food_x, g->food_y, CELL_FOOD);
+        draw_cell(g->food_x, g->food_y, g->map[g->food_y][g->food_x]);
 
         /* 速度调整 */
         adjust_speed(g);
@@ -689,7 +756,7 @@ static void show_main_menu(void) {
         printf("  历史最高分: %d", g_high_score);
 
         /* 底部提示 */
-        print_center(22, "使用 W/S 或 ↑/↓ 选择，Enter 确认", CLR_HINT);
+        print_center(22, "使用 W/S 或 ↑/↓ 选择,Enter 确认", CLR_HINT);
 
         reset_color();
 
@@ -704,7 +771,7 @@ static void show_main_menu(void) {
         switch (key) {
             case 'w': case 'W': sel = (sel - 1 + n) % n; break;
             case 's': case 'S': sel = (sel + 1) % n;      break;
-            case '1': sel = 0; /* 直接跳转 */
+            case '1': sel = 0; /* 直接跳转 */   
             case '\r': case '\n':
                 switch (sel) {
                     case 0: start_game();     break;
@@ -741,17 +808,19 @@ DO_HELP:
         gotoxy(14, 13);
         set_color(CLR_SCORE);
         printf("【游戏规则】");
-        gotoxy(14, 14); set_color(CLR_MENU);   printf("● 控制蛇吃掉红色◆食物，每个+10分");
-        gotoxy(14, 15); printf("● 吃到食物后蛇身变长一节");
-        gotoxy(14, 16); printf("● 撞到墙壁或蛇身则游戏结束");
+        gotoxy(14, 14); set_color(CLR_MENU);   printf("● 控制蛇吃掉食物获得分数");
+        gotoxy(14, 15); printf("  蓝色◆ +10分 | 紫色◆ +20分 | 橙色◆ +30分");
+        gotoxy(14, 16); printf("● 吃到食物后蛇身变长一节");
+        gotoxy(14, 17); printf("● 撞到墙壁则游戏结束");
+        gotoxy(14, 18); printf("● 撞到蛇身会失去被碰部位之后的身体");
 
-        gotoxy(14, 18);
+        gotoxy(14, 20);
         set_color(CLR_SCORE);
         printf("【速度档位】");
-        gotoxy(14, 19); set_color(CLR_MENU);
+        gotoxy(14, 21); set_color(CLR_MENU);
         printf("0分:慢速 → 30分:普通 → 80分:快速 → 150分:极速");
 
-        print_center(21, "按任意键返回主菜单", CLR_HINT);
+        print_center(23, "按任意键返回主菜单", CLR_HINT);
         reset_color();
         while (_kbhit()) _getch();
         _getch();

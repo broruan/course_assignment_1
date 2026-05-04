@@ -24,12 +24,13 @@
 #define DIR_RIGHT 3
 
 /* ─── 地图格子类型 ─── */
-#define CELL_EMPTY  0
-#define CELL_WALL   1
-#define CELL_SNAKE  2
-#define CELL_FOOD_1 3  /* 蓝色食物 - 1倍分数 */
-#define CELL_FOOD_2 4  /* 紫色食物 - 2倍分数 */
-#define CELL_FOOD_3 5  /* 橙色食物 - 3倍分数 */
+#define CELL_EMPTY    0
+#define CELL_WALL     1
+#define CELL_SNAKE    2
+#define CELL_FOOD_1   3  /* 蓝色食物 - 1倍分数 */
+#define CELL_FOOD_2   4  /* 紫色食物 - 2倍分数 */
+#define CELL_FOOD_3   5  /* 橙色食物 - 3倍分数 */
+#define CELL_OBSTACLE 6  /* 障碍物 */
 
 /* ─── 速度档位（毫秒/帧） ─── */
 #define SPEED_SLOW   300
@@ -58,9 +59,9 @@
    数据结构：蛇节点（双向链表）
    ═══════════════════════════════ */
 typedef struct Node {
-    int x, y;
-    struct Node *prev;
-    struct Node *next;
+    int x, y;               //坐标
+    struct Node *prev;      //蛇尾方向
+    struct Node *next;      //蛇头方向
 } Node;
 
 /* ═══════════════════════════════
@@ -80,14 +81,13 @@ typedef struct {
     int   map[MAP_H][MAP_W]; /* 地图二维数组 */
     int   game_over;         /* 游戏结束标志 */
     int   paused;            /* 暂停标志 */
+    int   obstacle_x, obstacle_y; /* 障碍物起始坐标 */
+    int   obstacle_horizontal;    /* 障碍物方向：1=横向，0=纵向 */
 } GameState;
 
 /* ─── 全局最高分（跨局） ─── */
 static int g_high_score = 0;
 
-/* ════════════════════════════════════════
-   工具函数：控制台操作
-   ════════════════════════════════════════ */
 
 /* 移动光标到 (x, y) */
 static void gotoxy(int x, int y) {
@@ -153,6 +153,10 @@ static void draw_cell(int mx, int my, int type) {
     switch (type) {
         case CELL_WALL:
             set_color(CLR_WALL); //定义边界
+            printf("██");
+            break;
+        case CELL_OBSTACLE:
+            set_color(CLR_WALL); //障碍物使用与边界相同的颜色
             printf("██");
             break;
         case CELL_SNAKE:
@@ -237,7 +241,7 @@ static void draw_full_map(GameState *g) {
 
 /* ════════════════════════════════════════
    生成食物（随机放置在空格上，随机类型）
-   ═════════════════════SSSSSSSSSSSSSS═══════════════════ */
+   ════════════════════════════════════════ */
 static void generate_food(GameState *g) {
     int x, y;
     int food_rand;
@@ -261,6 +265,88 @@ static void generate_food(GameState *g) {
     } else {
         g->food_type = 3;
         g->map[y][x] = CELL_FOOD_3;
+    }
+}
+
+/* ════════════════════════════════════════
+   清除旧障碍物
+   ════════════════════════════════════════ */
+static void clear_obstacle(GameState *g) {
+    int i;
+
+    if (g->obstacle_x == 0 && g->obstacle_y == 0) return;
+
+    if (g->obstacle_horizontal) {
+        for (i = 0; i < 5; i++) {
+            g->map[g->obstacle_y][g->obstacle_x + i] = CELL_EMPTY;
+            draw_cell(g->obstacle_x + i, g->obstacle_y, CELL_EMPTY);
+        }
+    } else {
+        for (i = 0; i < 5; i++) {
+            g->map[g->obstacle_y + i][g->obstacle_x] = CELL_EMPTY;
+            draw_cell(g->obstacle_x, g->obstacle_y + i, CELL_EMPTY);
+        }
+    }
+}
+
+/* ════════════════════════════════════════
+   生成随机障碍物（1x5大小，随机横竖）
+   ════════════════════════════════════════ */
+static void generate_obstacle(GameState *g) {
+    int x, y, i, valid;
+    int horizontal;
+
+    /* 先清除旧障碍物 */
+    clear_obstacle(g);
+
+    /* 随机决定障碍物方向：0=纵向，1=横向 */
+    horizontal = rand() % 2;
+
+    /* 尝试找到合适的位置放置障碍物 */
+    do {
+        valid = 1;
+        if (horizontal) {
+            /* 横向障碍物：1行5列 */
+            x = rand() % (MAP_W - 7) + 2;  /* 留出边界和空间 */
+            y = rand() % (MAP_H - 4) + 2;
+
+            /* 检查5个连续位置是否都为空 */
+            for (i = 0; i < 5; i++) {
+                if (g->map[y][x + i] != CELL_EMPTY) {
+                    valid = 0;
+                    break;
+                }
+            }
+        } else {
+            /* 纵向障碍物：5行1列 */
+            x = rand() % (MAP_W - 4) + 2;
+            y = rand() % (MAP_H - 7) + 2;
+
+            /* 检查5个连续位置是否都为空 */
+            for (i = 0; i < 5; i++) {
+                if (g->map[y + i][x] != CELL_EMPTY) {
+                    valid = 0;
+                    break;
+                }
+            }
+        }
+    } while (!valid);
+
+    /* 放置障碍物 */
+    g->obstacle_x = x;
+    g->obstacle_y = y;
+    g->obstacle_horizontal = horizontal;
+
+    if (horizontal) {
+        for (i = 0; i < 5; i++) {
+            g->map[y][x + i] = CELL_OBSTACLE;
+            draw_cell(x + i, y, CELL_OBSTACLE);
+        }
+    } else {
+        for (i = 0; i < 5; i++) {
+            g->map[y + i][x] = CELL_OBSTACLE;
+            draw_cell(x, y + i, CELL_OBSTACLE);
+        }
     }
 }
 
@@ -474,9 +560,9 @@ static void move_snake(GameState *g) {
         case DIR_RIGHT: nx++; break;
     }
 
-    /* ─── 死亡判定：撞墙 ─── */
+    /* ─── 死亡判定：撞墙或撞障碍物 ─── */
     cell = g->map[ny][nx];
-    if (cell == CELL_WALL) {
+    if (cell == CELL_WALL || cell == CELL_OBSTACLE) {
         g->game_over = 1;
         return;
     }
@@ -532,6 +618,9 @@ static void move_snake(GameState *g) {
         /* 原蛇头变为蛇身 */
         if (g->head->next)
             draw_cell(g->head->next->x, g->head->next->y, CELL_SNAKE);
+
+        /* 刷新障碍物位置 */
+        generate_obstacle(g);
 
         /* 生成新食物 */
         generate_food(g);
@@ -645,6 +734,11 @@ static void start_game(void) {
 
     /* ── 初始化蛇 ── */
     init_snake(&g);
+
+    /* ── 生成障碍物 ── */
+    g.obstacle_x = 0;
+    g.obstacle_y = 0;
+    generate_obstacle(&g);
 
     /* ── 生成第一个食物 ── */
     generate_food(&g);
@@ -771,7 +865,7 @@ static void show_main_menu(void) {
         switch (key) {
             case 'w': case 'W': sel = (sel - 1 + n) % n; break;
             case 's': case 'S': sel = (sel + 1) % n;      break;
-            case '1': sel = 0; /* 直接跳转 */   
+            case '1': sel = 0;  /* fall through */  /* 直接跳转 */ 
             case '\r': case '\n':
                 switch (sel) {
                     case 0: start_game();     break;
@@ -798,26 +892,27 @@ DO_HELP:
         gotoxy(14, 5);
         set_color(CLR_SCORE);
         printf("【基本操作】");
-        gotoxy(14, 6);  set_color(CLR_MENU);   printf("W / ↑      向上移动");
-        gotoxy(14, 7);  printf("S / ↓      向下移动");
-        gotoxy(14, 8);  printf("A / ←      向左移动");
-        gotoxy(14, 9);  printf("D / →      向右移动");
-        gotoxy(14, 10); printf("P / ESC    暂停/继续游戏");
-        gotoxy(14, 11); printf("Q          退出当前游戏");
+        gotoxy(14, 5);  set_color(CLR_MENU);   printf("W / ↑      向上移动");
+        gotoxy(14, 6);  printf("S / ↓      向下移动");
+        gotoxy(14, 7);  printf("A / ←      向左移动");
+        gotoxy(14, 8);  printf("D / →      向右移动");
+        gotoxy(14, 9); printf("P / ESC    暂停/继续游戏");
+        gotoxy(14, 10); printf("Q          退出当前游戏");
 
-        gotoxy(14, 13);
+        gotoxy(14, 12);
         set_color(CLR_SCORE);
         printf("【游戏规则】");
-        gotoxy(14, 14); set_color(CLR_MENU);   printf("● 控制蛇吃掉食物获得分数");
-        gotoxy(14, 15); printf("  蓝色◆ +10分 | 紫色◆ +20分 | 橙色◆ +30分");
-        gotoxy(14, 16); printf("● 吃到食物后蛇身变长一节");
-        gotoxy(14, 17); printf("● 撞到墙壁则游戏结束");
+        gotoxy(14, 13); set_color(CLR_MENU);   printf("● 控制蛇吃掉食物获得分数");
+        gotoxy(14, 14); printf("  蓝色◆ +10分 | 紫色◆ +20分 | 橙色◆ +30分");
+        gotoxy(14, 15); printf("● 吃到食物后蛇身变长一节");
+        gotoxy(14, 16); printf("● 障碍物大小1x5,随机刷新位置");
+        gotoxy(14, 17); printf("● 撞到墙壁或障碍物则游戏结束");
         gotoxy(14, 18); printf("● 撞到蛇身会失去被碰部位之后的身体");
 
-        gotoxy(14, 20);
+        gotoxy(14, 19);
         set_color(CLR_SCORE);
         printf("【速度档位】");
-        gotoxy(14, 21); set_color(CLR_MENU);
+        gotoxy(14, 20); set_color(CLR_MENU);
         printf("0分:慢速 → 30分:普通 → 80分:快速 → 150分:极速");
 
         print_center(23, "按任意键返回主菜单", CLR_HINT);
@@ -836,8 +931,8 @@ DO_ABOUT:
 
         gotoxy(20, 6);  set_color(CLR_SCORE); printf("游戏名称:  贪吃蛇 Snake Game");
         gotoxy(20, 7);  set_color(CLR_INFO);  printf("版    本:  v1.0.0");
-        gotoxy(20, 8);  set_color(CLR_MENU);  printf("语    言:  C (C99)");
-        gotoxy(20, 9);  printf("平    台:  Windows (conio.h)");
+        gotoxy(20, 8);  set_color(CLR_MENU);  printf("语    言:  C ");
+        gotoxy(20, 9);  printf("平    台:  Windows ");
         gotoxy(20, 10); printf("数据结构:  双向链表");
         gotoxy(20, 12); set_color(CLR_HINT);
         printf("本游戏为学习用途，包含:");

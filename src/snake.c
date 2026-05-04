@@ -160,8 +160,7 @@ static void draw_cell(int mx, int my, int type) {
             printf("██");
             break;
         case CELL_SNAKE:
-            /* 蛇头用亮绿，蛇身由调用方传 CELL_SNAKE，
-               头部特殊处理见 draw_full_map */
+            // 蛇头用亮绿，蛇身由调用方传 CELL_SNAKE
             set_color(CLR_SNAKE_B);
             printf("▓▓");
             break;
@@ -934,6 +933,7 @@ DO_ABOUT:
         gotoxy(20, 8);  set_color(CLR_MENU);  printf("语    言:  C ");
         gotoxy(20, 9);  printf("平    台:  Windows ");
         gotoxy(20, 10); printf("数据结构:  双向链表");
+        gotoxy(20, 11); printf("小组成员:邓棵元 阮禄鑫");
         gotoxy(20, 12); set_color(CLR_HINT);
         printf("本游戏为学习用途，包含:");
         gotoxy(20, 13); printf("主菜单、地图渲染、蛇链表移动");

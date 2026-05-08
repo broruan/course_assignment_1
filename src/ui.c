@@ -1,32 +1,29 @@
-static int g_high_score = 0;
+#include "snake.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <conio.h>
+#include <windows.h>
 
+int g_high_score = 0;
 
-/* 移动光标�?(x, y) */
-static void gotoxy(int x, int y) {
+void gotoxy(int x, int y) {
     COORD c = { (SHORT)x, (SHORT)y };
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
 }
-
-/* 隐藏/显示光标 */
-static void set_cursor(int visible) {
+void set_cursor(int visible) {
     CONSOLE_CURSOR_INFO ci;
     ci.dwSize   = 1;
     ci.bVisible = (BOOL)visible;
     SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ci);
 }
-
-/* 设置控制台字体颜�?*/
-static void set_color(int attr) {
+void set_color(int attr) {
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (WORD)attr);
 }
-
-/* 重置颜色 */
-static void reset_color(void) {
+void reset_color(void) {
     set_color(CLR_DEFAULT);
 }
-
-/* 居中打印字符串（控制台宽�?80�?*/
-static void print_center(int y, const char *str, int color) {
+void print_center(int y, const char *str, int color) {
     int x = (80 - (int)strlen(str)) / 2;
     if (x < 0) x = 0;
     gotoxy(x, y);
@@ -34,23 +31,19 @@ static void print_center(int y, const char *str, int color) {
     printf("%s", str);
     reset_color();
 }
-
-/* 清屏 */
-static void clear_screen(void) {
+void clear_screen(void) {
     system("cls");
 }
-
-/* 调整控制台窗口大�?*/
-static void set_console_size(int w, int h) {
+void set_console_size(int w, int h) {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     /* 先设置缓冲区 */
     COORD bufSize = { (SHORT)w, (SHORT)h };
     SetConsoleScreenBufferSize(hOut, bufSize);
-    /* 再设置窗口大�?*/
+    /* 再设置窗口大小 */
     SMALL_RECT rect = { 0, 0, (SHORT)(w - 1), (SHORT)(h - 1) };
     SetConsoleWindowInfo(hOut, TRUE, &rect);
 }
-static void draw_cell(int mx, int my, int type) {
+void draw_cell(int mx, int my, int type) {
     int sx = OFFSET_X + mx * 2;
     int sy = OFFSET_Y + my;
     gotoxy(sx, sy);
@@ -60,24 +53,24 @@ static void draw_cell(int mx, int my, int type) {
             printf("██");
             break;
         case CELL_OBSTACLE:
-            set_color(CLR_WALL); //障碍物使用与边界相同的颜�?
+            set_color(CLR_WALL); //障碍物使用与边界相同的颜色
             printf("██");
             break;
         case CELL_SNAKE:
-            /* 蛇头用亮绿，蛇身由调用方�?CELL_SNAKE�?
-               头部特殊处理�?draw_full_map */
+            /* 蛇头用亮绿，蛇身由调用方传 CELL_SNAKE，
+               头部特殊处理见 draw_full_map */
             set_color(CLR_SNAKE_B);
             printf("▓▓");
             break;
-        case CELL_FOOD_1:     //蓝色食物 - 1�?
+        case CELL_FOOD_1:     //蓝色食物 - 1倍
             set_color(CLR_FOOD_1);
             printf("◆◆");
             break;
-        case CELL_FOOD_2:     //紫色食物 - 2�?
+        case CELL_FOOD_2:     //紫色食物 - 2倍
             set_color(CLR_FOOD_2);
             printf("◆◆");
             break;
-        case CELL_FOOD_3:     //橙色食物 - 3�?
+        case CELL_FOOD_3:     //橙色食物 - 3倍
             set_color(CLR_FOOD_3);
             printf("◆◆");
             break;
@@ -89,9 +82,7 @@ static void draw_cell(int mx, int my, int type) {
     }
     reset_color();
 }
-
-/* 专门绘制蛇头（颜色区别于蛇身�?*/
-static void draw_head_cell(int mx, int my) {
+void draw_head_cell(int mx, int my) {
     int sx = OFFSET_X + mx * 2;
     int sy = OFFSET_Y + my;
     gotoxy(sx, sy);
@@ -99,11 +90,7 @@ static void draw_head_cell(int mx, int my) {
     printf("██");
     reset_color();
 }
-
-/* ════════════════════════════════════════
-   初始�?/ 绘制地图边界
-   ════════════════════════════════════════ */
-static void draw_full_map(GameState *g) {
+void draw_full_map(GameState *g) {
     int x, y;
     Node *cur;
 
@@ -126,11 +113,7 @@ static void draw_full_map(GameState *g) {
     else
         draw_cell(g->food_x, g->food_y, CELL_FOOD_3);
 }
-
-/* ════════════════════════════════════════
-   生成食物（随机放置在空格上，随机类型�?
-   ════════════════════════════════════════ */
-static void draw_score_panel(GameState *g) {
+void draw_score_panel(GameState *g) {
     const char *speed_str;
 
     /* 得分 */
@@ -141,7 +124,7 @@ static void draw_score_panel(GameState *g) {
     /* 最高分 */
     gotoxy(INFO_X, OFFSET_Y + 2);
     set_color(CLR_INFO);
-    printf("最�? %-5d", g->high_score);
+    printf("最高: %-5d", g->high_score);
 
     /* 长度 */
     gotoxy(INFO_X, OFFSET_Y + 4);
@@ -149,10 +132,10 @@ static void draw_score_panel(GameState *g) {
     printf("长度: %-5d", g->length);
 
     /* 速度档位 */
-    if      (g->speed == SPEED_TURBO)  speed_str = "极�?★★★★";
-    else if (g->speed == SPEED_FAST)   speed_str = "快�?★★�?";
-    else if (g->speed == SPEED_NORMAL) speed_str = "普�?★★  ";
-    else                               speed_str = "慢�?�?  ";
+    if      (g->speed == SPEED_TURBO)  speed_str = "极速 ★★★★";
+    else if (g->speed == SPEED_FAST)   speed_str = "快速 ★★★ ";
+    else if (g->speed == SPEED_NORMAL) speed_str = "普通 ★★  ";
+    else                               speed_str = "慢速 ★   ";
 
     gotoxy(INFO_X, OFFSET_Y + 5);
     set_color(CLR_SCORE);
@@ -161,44 +144,38 @@ static void draw_score_panel(GameState *g) {
     /* 操作提示 */
     gotoxy(INFO_X, OFFSET_Y + 8);
     set_color(CLR_HINT);
-    printf("方向: WASD / 方向�?);
+    printf("方向: WASD / 方向键");
     gotoxy(INFO_X, OFFSET_Y + 9);
     printf("暂停: P / ESC");
     gotoxy(INFO_X, OFFSET_Y + 10);
-    printf("退�? Q");
+    printf("退出: Q");
 
     reset_color();
 }
-
-/* 初始绘制信息区标�?*/
-static void draw_info_title(void) {
+void draw_info_title(void) {
     gotoxy(INFO_X, OFFSET_Y - 1);
     set_color(CLR_TITLE);
-    printf("╔═�?游戏信息 ══�?);
+    printf("╔══ 游戏信息 ══╗");
     gotoxy(INFO_X, OFFSET_Y + 12);
     printf("╚══════════════╝");
     reset_color();
 }
-
-/* ════════════════════════════════════════
-   处理键盘输入（非阻塞�?
-   ════════════════════════════════════════ */
-static void show_game_over(GameState *g) {
+void show_game_over(GameState *g) {
     int cx = OFFSET_X + MAP_W;  /* 地图中央大概 X */
 
-    /* 在地图中央叠�?Game Over �?*/
+    /* 在地图中央叠加 Game Over 框 */
     int gx = OFFSET_X + MAP_W / 2 - 8;
     int gy = OFFSET_Y + MAP_H / 2 - 3;
 
     gotoxy(gx, gy);
     set_color(CLR_GAMEOVER);
-    printf("╔═══════════════════�?);
+    printf("╔═══════════════════╗");
     gotoxy(gx, gy + 1);
-    printf("�?                  �?);
+    printf("║                   ║");
     gotoxy(gx, gy + 2);
-    printf("�?  �?游戏结束 �?  �?);
+    printf("║   ★ 游戏结束 ★   ║");
     gotoxy(gx, gy + 3);
-    printf("�?                  �?);
+    printf("║                   ║");
 
     gotoxy(gx + 2, gy + 4);
     set_color(CLR_SCORE);
@@ -206,74 +183,66 @@ static void show_game_over(GameState *g) {
 
     gotoxy(gx, gy + 4);
     set_color(CLR_GAMEOVER);
-    printf("�?);
+    printf("║");
     gotoxy(gx + 19, gy + 4);
-    printf("�?);
+    printf("║");
 
     gotoxy(gx + 2, gy + 5);
     set_color(CLR_INFO);
-    printf("最�? %-5d", g_high_score);
+    printf("最高: %-5d", g_high_score);
 
     gotoxy(gx, gy + 5);
     set_color(CLR_GAMEOVER);
-    printf("�?);
+    printf("║");
     gotoxy(gx + 19, gy + 5);
-    printf("�?);
+    printf("║");
 
     gotoxy(gx, gy + 6);
     set_color(CLR_GAMEOVER);
-    printf("�?                  �?);
+    printf("║                   ║");
     gotoxy(gx, gy + 7);
-    printf("╚═══════════════════�?);
+    printf("╚═══════════════════╝");
 
     gotoxy(gx + 1, gy + 6);
     set_color(CLR_HINT);
-    printf("按任意键返回主菜�?);
+    printf("按任意键返回主菜单");
 
     reset_color();
-    (void)cx;  /* 消除未使用警�?*/
+    (void)cx;  /* 消除未使用警告 */
 
     /* 清空输入缓冲 */
     while (_kbhit()) _getch();
     _getch();
 }
-
-/* ════════════════════════════════════════
-   开始游戏（主游戏循环）
-   ════════════════════════════════════════ */
-static void draw_menu_box(int x, int y, int w, int h) {
+void draw_menu_box(int x, int y, int w, int h) {
     int i;
     set_color(CLR_BORDER);
 
     gotoxy(x, y);
-    printf("�?);
-    for (i = 0; i < w - 2; i++) printf("�?);
-    printf("�?);
+    printf("╔");
+    for (i = 0; i < w - 2; i++) printf("═");
+    printf("╗");
 
     for (i = 1; i < h - 1; i++) {
         gotoxy(x, y + i);
-        printf("�?);
+        printf("║");
         gotoxy(x + w - 1, y + i);
-        printf("�?);
+        printf("║");
     }
 
     gotoxy(x, y + h - 1);
-    printf("�?);
-    for (i = 0; i < w - 2; i++) printf("�?);
-    printf("�?);
+    printf("╚");
+    for (i = 0; i < w - 2; i++) printf("═");
+    printf("╝");
 
     reset_color();
 }
-
-/* ════════════════════════════════════════
-   主菜�?
-   ════════════════════════════════════════ */
-static void show_main_menu(void) {
+void show_main_menu(void) {
     const char *items[] = {
-        "  1.  开始游�? ",
+        "  1.  开始游戏  ",
         "  2.  帮助信息  ",
         "  3.  关于信息  ",
-        "  4.  退出游�? "
+        "  4.  退出游戏  "
     };
     int n = 4, sel = 0, key, ext, i;
 
@@ -288,17 +257,17 @@ static void show_main_menu(void) {
         print_center(4, "\\___ \\|  \\| | / _ \\ | ' /|  _|  ", CLR_TITLE);
         print_center(5, " ___) | |\\  |/ ___ \\| . \\| |___ ", CLR_TITLE);
         print_center(6, "|____/|_| \\_/_/   \\_\\_|\\_\\_____|", CLR_TITLE);
-        print_center(7, "       �? �? �? �? �?      ", CLR_SCORE);
+        print_center(7, "       贪  吃  蛇  游  戏       ", CLR_SCORE);
 
-        /* 菜单�?*/
+        /* 菜单框 */
         draw_menu_box(28, 10, 24, 14);
 
-        /* 菜单�?*/
+        /* 菜单项 */
         for (i = 0; i < n; i++) {
             gotoxy(30, 12 + i * 2);
             if (i == sel) {
                 set_color(CLR_SELECT);
-                printf("�?%s ◀", items[i]);
+                printf("▶ %s ◀", items[i]);
             } else {
                 set_color(CLR_MENU);
                 printf("  %s  ", items[i]);
@@ -311,7 +280,7 @@ static void show_main_menu(void) {
         printf("  历史最高分: %d", g_high_score);
 
         /* 底部提示 */
-        print_center(22, "使用 W/S �?�?�?选择,Enter 确认", CLR_HINT);
+        print_center(22, "使用 W/S 或 ↑/↓ 选择,Enter 确认", CLR_HINT);
 
         reset_color();
 
@@ -319,8 +288,8 @@ static void show_main_menu(void) {
         key = _getch();
         if (key == 0 || key == 224) {
             ext = _getch();
-            if (ext == 72) key = 'w';  /* �?*/
-            if (ext == 80) key = 's';  /* �?*/
+            if (ext == 72) key = 'w';  /* ↑ */
+            if (ext == 80) key = 's';  /* ↓ */
         }
 
         switch (key) {
@@ -352,31 +321,31 @@ DO_HELP:
 
         gotoxy(14, 5);
         set_color(CLR_SCORE);
-        printf("【基本操作�?);
-        gotoxy(14, 5);  set_color(CLR_MENU);   printf("W / �?     向上移动");
-        gotoxy(14, 6);  printf("S / �?     向下移动");
-        gotoxy(14, 7);  printf("A / �?     向左移动");
-        gotoxy(14, 8);  printf("D / �?     向右移动");
+        printf("【基本操作】");
+        gotoxy(14, 5);  set_color(CLR_MENU);   printf("W / ↑      向上移动");
+        gotoxy(14, 6);  printf("S / ↓      向下移动");
+        gotoxy(14, 7);  printf("A / ←      向左移动");
+        gotoxy(14, 8);  printf("D / →      向右移动");
         gotoxy(14, 9); printf("P / ESC    暂停/继续游戏");
-        gotoxy(14, 10); printf("Q          退出当前游�?);
+        gotoxy(14, 10); printf("Q          退出当前游戏");
 
         gotoxy(14, 12);
         set_color(CLR_SCORE);
-        printf("【游戏规则�?);
-        gotoxy(14, 13); set_color(CLR_MENU);   printf("�?控制蛇吃掉食物获得分�?);
-        gotoxy(14, 14); printf("  蓝色�?+10�?| 紫色�?+20�?| 橙色�?+30�?);
-        gotoxy(14, 15); printf("�?吃到食物后蛇身变长一�?);
-        gotoxy(14, 16); printf("�?障碍物大�?x5,随机刷新位置");
-        gotoxy(14, 17); printf("�?撞到墙壁或障碍物则游戏结�?);
-        gotoxy(14, 18); printf("�?撞到蛇身会失去被碰部位之后的身体");
+        printf("【游戏规则】");
+        gotoxy(14, 13); set_color(CLR_MENU);   printf("● 控制蛇吃掉食物获得分数");
+        gotoxy(14, 14); printf("  蓝色◆ +10分 | 紫色◆ +20分 | 橙色◆ +30分");
+        gotoxy(14, 15); printf("● 吃到食物后蛇身变长一节");
+        gotoxy(14, 16); printf("● 障碍物大小1x5,随机刷新位置");
+        gotoxy(14, 17); printf("● 撞到墙壁或障碍物则游戏结束");
+        gotoxy(14, 18); printf("● 撞到蛇身会失去被碰部位之后的身体");
 
         gotoxy(14, 19);
         set_color(CLR_SCORE);
-        printf("【速度档位�?);
+        printf("【速度档位】");
         gotoxy(14, 20); set_color(CLR_MENU);
-        printf("0�?慢�?�?30�?普�?�?80�?快�?�?150�?极�?);
+        printf("0分:慢速 → 30分:普通 → 80分:快速 → 150分:极速");
 
-        print_center(23, "按任意键返回主菜�?, CLR_HINT);
+        print_center(23, "按任意键返回主菜单", CLR_HINT);
         reset_color();
         while (_kbhit()) _getch();
         _getch();
@@ -390,11 +359,12 @@ DO_ABOUT:
 
         print_center(4,  "══════ 关于信息 ══════", CLR_TITLE);
 
-        gotoxy(20, 6);  set_color(CLR_SCORE); printf("游戏名称:  贪吃�?Snake Game");
-        gotoxy(20, 7);  set_color(CLR_INFO);  printf("�?   �?  v1.0.0");
-        gotoxy(20, 8);  set_color(CLR_MENU);  printf("�?   言:  C ");
-        gotoxy(20, 9);  printf("�?   �?  Windows ");
+        gotoxy(20, 6);  set_color(CLR_SCORE); printf("游戏名称:  贪吃蛇 Snake Game");
+        gotoxy(20, 7);  set_color(CLR_INFO);  printf("版    本:  v1.0.0");
+        gotoxy(20, 8);  set_color(CLR_MENU);  printf("语    言:  C ");
+        gotoxy(20, 9);  printf("平    台:  Windows ");
         gotoxy(20, 10); printf("数据结构:  双向链表");
+        gotoxy(20, 11); printf("小组成员：邓棵元  阮禄鑫");
         gotoxy(20, 12); set_color(CLR_HINT);
         printf("本游戏为学习用途，包含:");
         gotoxy(20, 13); printf("主菜单、地图渲染、蛇链表移动");
@@ -402,7 +372,7 @@ DO_ABOUT:
         gotoxy(20, 15); set_color(CLR_SCORE);
         printf("历史最高分: %d", g_high_score);
 
-        print_center(19, "按任意键返回主菜�?, CLR_HINT);
+        print_center(19, "按任意键返回主菜单", CLR_HINT);
         reset_color();
         while (_kbhit()) _getch();
         _getch();
@@ -411,14 +381,10 @@ DO_ABOUT:
 DO_EXIT:
         clear_screen();
         set_cursor(1);
-        print_center(12, "感谢游玩！再�?(�?ω<�?", CLR_TITLE);
+        print_center(12, "感谢游玩！再见 (｡>ω<｡)", CLR_TITLE);
         print_center(13, "", CLR_DEFAULT);
         printf("\n");
         reset_color();
         return;
     }
 }
-
-/* ════════════════════════════════════════
-   程序入口
-   ════════════════════════════════════════ */

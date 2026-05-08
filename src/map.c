@@ -33,7 +33,6 @@ void generate_food(GameState *g) {
     g->food_x = x;
     g->food_y = y;
 
-    /* 闅忔満鐢熸垚椋熺墿绫诲瀷 */
     {
         int food_rand = rand() % 100;
         if (food_rand < 50) {

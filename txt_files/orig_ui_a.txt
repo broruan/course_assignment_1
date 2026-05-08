@@ -1,0 +1,52 @@
+static int g_high_score = 0;
+
+
+/* 移动光标�?(x, y) */
+static void gotoxy(int x, int y) {
+    COORD c = { (SHORT)x, (SHORT)y };
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+}
+
+/* 隐藏/显示光标 */
+static void set_cursor(int visible) {
+    CONSOLE_CURSOR_INFO ci;
+    ci.dwSize   = 1;
+    ci.bVisible = (BOOL)visible;
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ci);
+}
+
+/* 设置控制台字体颜�?*/
+static void set_color(int attr) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (WORD)attr);
+}
+
+/* 重置颜色 */
+static void reset_color(void) {
+    set_color(CLR_DEFAULT);
+}
+
+/* 居中打印字符串（控制台宽�?80�?*/
+static void print_center(int y, const char *str, int color) {
+    int x = (80 - (int)strlen(str)) / 2;
+    if (x < 0) x = 0;
+    gotoxy(x, y);
+    set_color(color);
+    printf("%s", str);
+    reset_color();
+}
+
+/* 清屏 */
+static void clear_screen(void) {
+    system("cls");
+}
+
+/* 调整控制台窗口大�?*/
+static void set_console_size(int w, int h) {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    /* 先设置缓冲区 */
+    COORD bufSize = { (SHORT)w, (SHORT)h };
+    SetConsoleScreenBufferSize(hOut, bufSize);
+    /* 再设置窗口大�?*/
+    SMALL_RECT rect = { 0, 0, (SHORT)(w - 1), (SHORT)(h - 1) };
+    SetConsoleWindowInfo(hOut, TRUE, &rect);
+}

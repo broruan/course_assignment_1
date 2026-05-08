@@ -1,0 +1,58 @@
+static void show_game_over(GameState *g) {
+    int cx = OFFSET_X + MAP_W;  /* 地图中央大概 X */
+
+    /* 在地图中央叠�?Game Over �?*/
+    int gx = OFFSET_X + MAP_W / 2 - 8;
+    int gy = OFFSET_Y + MAP_H / 2 - 3;
+
+    gotoxy(gx, gy);
+    set_color(CLR_GAMEOVER);
+    printf("╔═══════════════════�?);
+    gotoxy(gx, gy + 1);
+    printf("�?                  �?);
+    gotoxy(gx, gy + 2);
+    printf("�?  �?游戏结束 �?  �?);
+    gotoxy(gx, gy + 3);
+    printf("�?                  �?);
+
+    gotoxy(gx + 2, gy + 4);
+    set_color(CLR_SCORE);
+    printf("得分: %-5d", g->score);
+
+    gotoxy(gx, gy + 4);
+    set_color(CLR_GAMEOVER);
+    printf("�?);
+    gotoxy(gx + 19, gy + 4);
+    printf("�?);
+
+    gotoxy(gx + 2, gy + 5);
+    set_color(CLR_INFO);
+    printf("最�? %-5d", g_high_score);
+
+    gotoxy(gx, gy + 5);
+    set_color(CLR_GAMEOVER);
+    printf("�?);
+    gotoxy(gx + 19, gy + 5);
+    printf("�?);
+
+    gotoxy(gx, gy + 6);
+    set_color(CLR_GAMEOVER);
+    printf("�?                  �?);
+    gotoxy(gx, gy + 7);
+    printf("╚═══════════════════�?);
+
+    gotoxy(gx + 1, gy + 6);
+    set_color(CLR_HINT);
+    printf("按任意键返回主菜�?);
+
+    reset_color();
+    (void)cx;  /* 消除未使用警�?*/
+
+    /* 清空输入缓冲 */
+    while (_kbhit()) _getch();
+    _getch();
+}
+
+/* ════════════════════════════════════════
+   开始游戏（主游戏循环）
+   ════════════════════════════════════════ */

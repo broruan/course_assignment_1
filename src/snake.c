@@ -86,7 +86,7 @@ typedef struct {
 } GameState;
 
 /* ─── 全局最高分（跨局） ─── */
-static int g_high_score = 0;
+int g_high_score = 0;
 
 
 /* 移动光标到 (x, y) */
@@ -129,7 +129,7 @@ static void clear_screen(void) {
 }
 
 /* 调整控制台窗口大小 */
-static void set_console_size(int w, int h) {
+void set_console_size(int w, int h) {
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     /* 先设置缓冲区 */
     COORD bufSize = { (SHORT)w, (SHORT)h };
@@ -807,7 +807,7 @@ static void draw_menu_box(int x, int y, int w, int h) {
 /* ════════════════════════════════════════
    主菜单
    ════════════════════════════════════════ */
-static void show_main_menu(void) {
+void show_main_menu(void) {
     const char *items[] = {
         "  1.  开始游戏  ",
         "  2.  帮助信息  ",
@@ -961,7 +961,7 @@ DO_EXIT:
 /* ════════════════════════════════════════
    程序入口
    ════════════════════════════════════════ */
-int main(void) {
+int snake_old_main(void) {
     /* 设置控制台编码为 UTF-8 以支持中文和方块字符 */
     SetConsoleOutputCP(65001);
     SetConsoleCP(65001);

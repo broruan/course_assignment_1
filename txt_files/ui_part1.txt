@@ -1,0 +1,113 @@
+static int g_high_score = 0;
+
+
+/* 移动光标�?(x, y) */
+static void gotoxy(int x, int y) {
+    COORD c = { (SHORT)x, (SHORT)y };
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), c);
+}
+
+/* 隐藏/显示光标 */
+static void set_cursor(int visible) {
+    CONSOLE_CURSOR_INFO ci;
+    ci.dwSize   = 1;
+    ci.bVisible = (BOOL)visible;
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ci);
+}
+
+/* 设置控制台字体颜�?*/
+static void set_color(int attr) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (WORD)attr);
+}
+
+/* 重置颜色 */
+static void reset_color(void) {
+    set_color(CLR_DEFAULT);
+}
+
+/* 居中打印字符串（控制台宽�?80�?*/
+static void print_center(int y, const char *str, int color) {
+    int x = (80 - (int)strlen(str)) / 2;
+    if (x < 0) x = 0;
+    gotoxy(x, y);
+    set_color(color);
+    printf("%s", str);
+    reset_color();
+}
+
+/* 清屏 */
+static void clear_screen(void) {
+    system("cls");
+}
+
+/* 调整控制台窗口大�?*/
+static void set_console_size(int w, int h) {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    /* 先设置缓冲区 */
+    COORD bufSize = { (SHORT)w, (SHORT)h };
+    SetConsoleScreenBufferSize(hOut, bufSize);
+    /* 再设置窗口大�?*/
+    SMALL_RECT rect = { 0, 0, (SHORT)(w - 1), (SHORT)(h - 1) };
+    SetConsoleWindowInfo(hOut, TRUE, &rect);
+}
+
+/* ════════════════════════════════════════
+   绘制单个格子（地图坐�?�?屏幕坐标�?
+   每格�?2 字符，起�?X 偏移 2，Y 偏移 2
+   ════════════════════════════════════════ */
+#define OFFSET_X 2   /* 地图在屏幕的起始�?*/
+#define OFFSET_Y 2   /* 地图在屏幕的起始�?*/
+
+static void draw_cell(int mx, int my, int type) {
+    int sx = OFFSET_X + mx * 2;
+    int sy = OFFSET_Y + my;
+    gotoxy(sx, sy);
+    switch (type) {
+        case CELL_WALL:
+            set_color(CLR_WALL); //定义边界
+            printf("██");
+            break;
+        case CELL_OBSTACLE:
+            set_color(CLR_WALL); //障碍物使用与边界相同的颜�?
+            printf("██");
+            break;
+        case CELL_SNAKE:
+            /* 蛇头用亮绿，蛇身由调用方�?CELL_SNAKE�?
+               头部特殊处理�?draw_full_map */
+            set_color(CLR_SNAKE_B);
+            printf("▓▓");
+            break;
+        case CELL_FOOD_1:     //蓝色食物 - 1�?
+            set_color(CLR_FOOD_1);
+            printf("◆◆");
+            break;
+        case CELL_FOOD_2:     //紫色食物 - 2�?
+            set_color(CLR_FOOD_2);
+            printf("◆◆");
+            break;
+        case CELL_FOOD_3:     //橙色食物 - 3�?
+            set_color(CLR_FOOD_3);
+            printf("◆◆");
+            break;
+        case CELL_EMPTY:
+        default:
+            set_color(CLR_DEFAULT);
+            printf("  ");
+            break;
+    }
+    reset_color();
+}
+
+/* 专门绘制蛇头（颜色区别于蛇身�?*/
+static void draw_head_cell(int mx, int my) {
+    int sx = OFFSET_X + mx * 2;
+    int sy = OFFSET_Y + my;
+    gotoxy(sx, sy);
+    set_color(CLR_SNAKE_H);
+    printf("██");
+    reset_color();
+}
+
+/* ════════════════════════════════════════
+   初始�?/ 绘制地图边界
+   ════════════════════════════════════════ */

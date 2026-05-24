@@ -1,0 +1,53 @@
+static void draw_cell(int mx, int my, int type) {
+    int sx = OFFSET_X + mx * 2;
+    int sy = OFFSET_Y + my;
+    gotoxy(sx, sy);
+    switch (type) {
+        case CELL_WALL:
+            set_color(CLR_WALL); //定义边界
+            printf("██");
+            break;
+        case CELL_OBSTACLE:
+            set_color(CLR_WALL); //障碍物使用与边界相同的颜�?
+            printf("██");
+            break;
+        case CELL_SNAKE:
+            /* 蛇头用亮绿，蛇身由调用方�?CELL_SNAKE�?
+               头部特殊处理�?draw_full_map */
+            set_color(CLR_SNAKE_B);
+            printf("▓▓");
+            break;
+        case CELL_FOOD_1:     //蓝色食物 - 1�?
+            set_color(CLR_FOOD_1);
+            printf("◆◆");
+            break;
+        case CELL_FOOD_2:     //紫色食物 - 2�?
+            set_color(CLR_FOOD_2);
+            printf("◆◆");
+            break;
+        case CELL_FOOD_3:     //橙色食物 - 3�?
+            set_color(CLR_FOOD_3);
+            printf("◆◆");
+            break;
+        case CELL_EMPTY:
+        default:
+            set_color(CLR_DEFAULT);
+            printf("  ");
+            break;
+    }
+    reset_color();
+}
+
+/* 专门绘制蛇头（颜色区别于蛇身�?*/
+static void draw_head_cell(int mx, int my) {
+    int sx = OFFSET_X + mx * 2;
+    int sy = OFFSET_Y + my;
+    gotoxy(sx, sy);
+    set_color(CLR_SNAKE_H);
+    printf("██");
+    reset_color();
+}
+
+/* ════════════════════════════════════════
+   初始�?/ 绘制地图边界
+   ════════════════════════════════════════ */

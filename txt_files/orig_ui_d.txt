@@ -1,0 +1,53 @@
+static void draw_score_panel(GameState *g) {
+    const char *speed_str;
+
+    /* 得分 */
+    gotoxy(INFO_X, OFFSET_Y + 1);
+    set_color(CLR_SCORE);
+    printf("得分: %-5d", g->score);
+
+    /* 最高分 */
+    gotoxy(INFO_X, OFFSET_Y + 2);
+    set_color(CLR_INFO);
+    printf("最�? %-5d", g->high_score);
+
+    /* 长度 */
+    gotoxy(INFO_X, OFFSET_Y + 4);
+    set_color(CLR_MENU);
+    printf("长度: %-5d", g->length);
+
+    /* 速度档位 */
+    if      (g->speed == SPEED_TURBO)  speed_str = "极�?★★★★";
+    else if (g->speed == SPEED_FAST)   speed_str = "快�?★★�?";
+    else if (g->speed == SPEED_NORMAL) speed_str = "普�?★★  ";
+    else                               speed_str = "慢�?�?  ";
+
+    gotoxy(INFO_X, OFFSET_Y + 5);
+    set_color(CLR_SCORE);
+    printf("速度: %s", speed_str);
+
+    /* 操作提示 */
+    gotoxy(INFO_X, OFFSET_Y + 8);
+    set_color(CLR_HINT);
+    printf("方向: WASD / 方向�?);
+    gotoxy(INFO_X, OFFSET_Y + 9);
+    printf("暂停: P / ESC");
+    gotoxy(INFO_X, OFFSET_Y + 10);
+    printf("退�? Q");
+
+    reset_color();
+}
+
+/* 初始绘制信息区标�?*/
+static void draw_info_title(void) {
+    gotoxy(INFO_X, OFFSET_Y - 1);
+    set_color(CLR_TITLE);
+    printf("╔═�?游戏信息 ══�?);
+    gotoxy(INFO_X, OFFSET_Y + 12);
+    printf("╚══════════════╝");
+    reset_color();
+}
+
+/* ════════════════════════════════════════
+   处理键盘输入（非阻塞�?
+   ════════════════════════════════════════ */

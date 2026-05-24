@@ -1,0 +1,27 @@
+static void draw_full_map(GameState *g) {
+    int x, y;
+    Node *cur;
+
+    for (y = 0; y < MAP_H; y++)
+        for (x = 0; x < MAP_W; x++)
+            draw_cell(x, y, g->map[y][x]);
+
+    /* 绘制蛇身 */
+    for (cur = g->tail; cur != g->head; cur = cur->prev)
+        draw_cell(cur->x, cur->y, CELL_SNAKE);
+
+    /* 蛇头高亮 */
+    draw_head_cell(g->head->x, g->head->y);
+
+    /* 绘制食物 */
+    if (g->food_type == 1)
+        draw_cell(g->food_x, g->food_y, CELL_FOOD_1);
+    else if (g->food_type == 2)
+        draw_cell(g->food_x, g->food_y, CELL_FOOD_2);
+    else
+        draw_cell(g->food_x, g->food_y, CELL_FOOD_3);
+}
+
+/* ════════════════════════════════════════
+   生成食物（随机放置在空格上，随机类型�?
+   ════════════════════════════════════════ */
